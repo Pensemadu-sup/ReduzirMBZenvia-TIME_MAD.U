@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <title>Reduzir arquivos — MAD.U</title>
-<meta name="description" content="Reduza fotos, vídeos e áudios para o tamanho aceito pelo WhatsApp. Roda no navegador, sem enviar o arquivo para lugar nenhum.">
+<meta name="description" content="Reduza fotos, vídeos e áudios para o tamanho aceito pelo Zenvia. Roda no navegador, sem enviar o arquivo para lugar nenhum.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;900&display=swap">
@@ -50,17 +50,8 @@
   h1 { margin: 0; font-size: clamp(2.1rem, 6.4vw, 3.8rem); font-weight: 900; line-height: 1.05; letter-spacing: -.035em; }
   .sub { margin: 18px 0 0; max-width: 38em; font-size: clamp(1rem, 2.2vw, 1.2rem); line-height: 1.55; color: var(--suave); }
 
-  .limite { margin-top: 32px; padding: 20px; border-radius: 22px; background: var(--faixa); }
-  .limite > b { display: block; font-weight: 600; margin-bottom: 12px; }
-  .pilulas { display: flex; flex-wrap: wrap; gap: 8px; }
-  .pilulas label { position: relative; }
-  .pilulas input[type=radio] { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
-  .pilulas span { display: inline-flex; align-items: center; min-height: 42px; padding: 0 18px; border-radius: 999px; background: var(--card); border: 1px solid var(--linha); font-size: .86rem; font-weight: 600; transition: background .2s, color .2s; }
-  .pilulas input:checked + span { background: var(--tinta); color: var(--fundo); border-color: var(--tinta); }
-  .pilulas input:focus-visible + span { outline: 3px solid var(--lavanda); outline-offset: 3px; }
-  .custom { display: inline-flex; align-items: center; gap: 8px; margin-left: 4px; font-size: .86rem; }
-  .custom input { width: 84px; min-height: 42px; padding: 0 12px; border: 1px solid var(--linha); border-radius: 12px; background: var(--card); }
-  .nota { margin: 14px 0 0; font-size: .82rem; line-height: 1.5; color: var(--suave); }
+  .selo { margin: 28px 0 0; display: inline-flex; align-items: center; gap: 10px; padding: 10px 18px; border-radius: 999px; background: var(--faixa); font-size: .88rem; font-weight: 600; }
+  .selo i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
 
   .zona { margin-top: 20px; position: relative; display: grid; place-items: center; gap: 10px; padding: clamp(36px, 7vw, 64px) 24px; text-align: center; background: var(--faixa); border: 2px dashed var(--linha); border-radius: 28px; cursor: pointer; transition: border-color .25s var(--ease), transform .35s var(--ease); }
   .zona:hover, .zona.sobre { border-color: var(--laranja); transform: translateY(-3px); }
@@ -122,18 +113,9 @@
 
 <main>
   <h1>Reduzir arquivos</h1>
-  <p class="sub">Arquivo grande demais para o WhatsApp? Arraste fotos, vídeos ou áudios aqui e baixe uma versão menor, pronta para enviar. Tudo acontece no seu computador: o arquivo não é enviado para lugar nenhum.</p>
+  <p class="sub">Arquivo grande demais para o WhatsApp? Arraste fotos, vídeos ou áudios aqui e baixe uma versão pronta para enviar. Tudo acontece no seu computador: o arquivo não é enviado para lugar nenhum.</p>
 
-  <section class="limite" aria-label="Tamanho máximo">
-    <b>Tamanho máximo do arquivo final</b>
-    <div class="pilulas" role="radiogroup" aria-label="Escolha o limite">
-      <label><input type="radio" name="modo" value="zenvia" checked><span>Zenvia / WhatsApp (recomendado)</span></label>
-      <label><input type="radio" name="modo" value="25"><span>25 MB</span></label>
-      <label><input type="radio" name="modo" value="custom"><span>Outro valor</span></label>
-      <span class="custom" id="boxCustom" hidden><input type="number" id="valCustom" min="1" max="500" value="10" inputmode="numeric" aria-label="Limite em MB"> MB</span>
-    </div>
-    <p class="nota" id="notaLimite"></p>
-  </section>
+  <p class="selo"><i aria-hidden="true"></i>Adequa o arquivo automaticamente ao Zenvia</p>
 
   <label class="zona" id="zona" for="arquivos">
     <span class="icone"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg></span>
@@ -154,8 +136,8 @@
   </section>
 
   <ol class="passos">
-    <li><b>1. Escolha o limite</b><span>Deixe em Zenvia / WhatsApp para respeitar o que a plataforma aceita para cada tipo de arquivo.</span></li>
-    <li><b>2. Solte os arquivos</b><span>Pode ser mais de um. Eles são reduzidos um de cada vez.</span></li>
+    <li><b>1. Solte os arquivos</b><span>Pode ser mais de um. O tipo (foto, vídeo ou áudio) é identificado sozinho.</span></li>
+    <li><b>2. Aguarde</b><span>Os arquivos são reduzidos um de cada vez, já no formato que o Zenvia aceita.</span></li>
     <li><b>3. Baixe e envie</b><span>O arquivo novo tem "-reduzido" no nome. O original não é alterado.</span></li>
   </ol>
 </main>
@@ -190,40 +172,60 @@
   function fmt(b) { return b >= MB ? (b / MB).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(b / 1024)) + " KB"; }
   function ext(n) { var m = /\.([a-z0-9]+)$/i.exec(n); return m ? m[1].toLowerCase() : ""; }
   function base(n) { return n.replace(/\.[a-z0-9]+$/i, ""); }
-  function tipoDe(f) {
+  var NOME_TIPO = { imagem: "imagem", video: "vídeo", audio: "áudio" };
+
+  /* ---------- identificação do arquivo ---------- */
+  // 1) olha os primeiros bytes (assinatura real do arquivo); 2) se não reconhecer, usa o tipo/extensão.
+  function tipoPorNome(f) {
     var e = ext(f.name);
     if (/^image\//.test(f.type) || /^(png|jpe?g|webp|gif|bmp|heic|heif|avif)$/.test(e)) return "imagem";
     if (/^video\//.test(f.type) || /^(mp4|mov|m4v|webm|mkv|avi|3gp|wmv|mpeg|mpg)$/.test(e)) return "video";
     if (/^audio\//.test(f.type) || /^(mp3|m4a|aac|wav|ogg|opus|amr|flac|wma)$/.test(e)) return "audio";
     return "outro";
   }
+  async function assinatura(f) {
+    var b = new Uint8Array(await f.slice(0, 32).arrayBuffer());
+    var s = function (a, z) { return String.fromCharCode.apply(null, Array.prototype.slice.call(b, a, z)); };
+    var ne = ext(f.name);
+    if (b[0] === 0x89 && s(1, 4) === "PNG") return { tipo: "imagem", ext: "png" };
+    if (b[0] === 0xFF && b[1] === 0xD8) return { tipo: "imagem", ext: "jpg" };
+    if (s(0, 3) === "GIF") return { tipo: "imagem", ext: "gif" };
+    if (s(0, 4) === "RIFF") {
+      var k = s(8, 12);
+      if (k === "WEBP") return { tipo: "imagem", ext: "webp" };
+      if (k === "WAVE") return { tipo: "audio", ext: "wav" };
+      if (k === "AVI ") return { tipo: "video", ext: "avi" };
+    }
+    if (s(4, 8) === "ftyp") {
+      var br = s(8, 12);
+      if (/^(heic|heix|hevc|hevx|heim|heis|mif1|msf1|heif)/.test(br)) return { tipo: "imagem", ext: "heic" };
+      if (/^avi[fs]/.test(br)) return { tipo: "imagem", ext: "avif" };
+      if (br === "M4A " || br === "M4B " || br === "M4P " || ne === "m4a" || ne === "m4b") return { tipo: "audio", ext: "m4a" };
+      if (br === "qt  ") return { tipo: "video", ext: "mov" };
+      return { tipo: "video", ext: "mp4" };
+    }
+    if (s(0, 4) === "OggS") return { tipo: "audio", ext: "ogg" };
+    if (b[0] === 0x1A && b[1] === 0x45 && b[2] === 0xDF && b[3] === 0xA3) return { tipo: "video", ext: ne === "mkv" ? "mkv" : "webm" };
+    if (s(0, 4) === "fLaC") return { tipo: "audio", ext: "flac" };
+    if (s(0, 5) === "#!AMR") return { tipo: "audio", ext: "amr" };
+    if (s(0, 3) === "ID3" || (b[0] === 0xFF && (b[1] & 0xE0) === 0xE0)) return { tipo: "audio", ext: "mp3" };
+    return null;
+  }
+  async function identificar(f) {
+    var a = null;
+    try { a = await assinatura(f); } catch (e) {}
+    return a || { tipo: tipoPorNome(f), ext: ext(f.name) };
+  }
 
-  /* ---------- limite ---------- */
-  function modo() { return document.querySelector('input[name="modo"]:checked').value; }
-  function limiteMB(tipo) {
-    var m = modo();
-    if (m === "25") return 25;
-    if (m === "custom") return Math.max(1, Number($("valCustom").value) || 1);
-    return { imagem: 5, video: 16, audio: 16, outro: 100 }[tipo];
-  }
-  function notaLimite() {
-    var m = modo(), t;
-    if (m === "zenvia") t = "O WhatsApp pelo Zenvia aceita até 5 MB por imagem e 16 MB por vídeo ou áudio. Por isso cada tipo é reduzido para o seu limite. Um arquivo de 25 MB ainda seria recusado.";
-    else if (m === "25") t = "Todos os arquivos serão reduzidos para no máximo 25 MB. Atenção: imagens acima de 5 MB e vídeos acima de 16 MB podem ser recusados pelo WhatsApp.";
-    else t = "Todos os arquivos serão reduzidos para o valor que você escolher.";
-    $("notaLimite").textContent = t;
-    $("boxCustom").hidden = m !== "custom";
-  }
-  Array.prototype.forEach.call(document.querySelectorAll('input[name="modo"]'), function (r) { r.addEventListener("change", notaLimite); });
-  notaLimite();
+  /* ---------- limites do Zenvia (fixos) ---------- */
+  function limiteMB(tipo) { return { imagem: 5, video: 16, audio: 16, outro: 100 }[tipo] || 16; }
 
   /* ---------- fila ---------- */
   var itens = [], rodando = false, seq = 0;
 
   function adicionar(arquivos) {
     Array.prototype.forEach.call(arquivos, function (f) {
-      var it = { id: ++seq, file: f, tipo: tipoDe(f), saida: null, estado: "espera" };
-      it.limite = limiteMB(it.tipo) * MB;
+      var it = { id: ++seq, file: f, tipo: "outro", limite: 0, saida: null, estado: "espera" };
       itens.push(it);
       desenharItem(it);
     });
@@ -270,22 +272,32 @@
   }
 
   async function processar(it) {
-    var f = it.file, lim = it.limite;
+    var f = it.file;
+    var id = await identificar(f);
+    it.tipo = id.tipo;
+    it.limite = limiteMB(it.tipo) * MB;
+    var lim = it.limite, ne = ext(f.name);
+
     if (it.tipo === "outro") {
       status(it, "Esse tipo de arquivo ainda não é reduzido aqui. " + (f.size <= 100 * MB ? "Mas até 100 MB ele pode ir como documento no WhatsApp." : "Ele passa de 100 MB, o limite de documentos do WhatsApp."), "erro");
       return;
     }
-    var e = ext(f.name);
-    if (it.tipo === "imagem" && f.size <= lim && /^(jpe?g|png)$/.test(e)) { status(it, "Já está dentro do limite de " + fmt(lim) + ". Pode enviar o original.", "ok"); return; }
-    if (it.tipo === "video" && f.size <= lim && e === "mp4") { status(it, "Já está dentro do limite de " + fmt(lim) + ". Pode enviar o original.", "ok"); return; }
-    if (it.tipo === "audio" && f.size <= lim && /^(mp3|m4a|aac|ogg|opus|amr)$/.test(e)) { status(it, "Já está dentro do limite de " + fmt(lim) + ". Pode enviar o original.", "ok"); return; }
+
+    var jaOk = "Já está dentro do que o Zenvia aceita. Pode enviar o original.";
+    if (it.tipo === "imagem" && f.size <= lim && /^(jpg|png)$/.test(id.ext) && /^(jpe?g|png)$/.test(ne)) { status(it, jaOk, "ok"); return; }
+    if (it.tipo === "audio" && f.size <= lim && /^(m4a|mp3|ogg|amr)$/.test(id.ext) && /^(mp3|m4a|aac|ogg|opus|amr)$/.test(ne)) { status(it, jaOk, "ok"); return; }
+    if (it.tipo === "video" && f.size <= lim && id.ext === "mp4" && /^(mp4|m4v)$/.test(ne)) {
+      var tem = true;
+      try { tem = (await sondarNavegador(f)).temVideo; } catch (e) {}
+      if (tem) { status(it, jaOk, "ok"); return; }
+    }
 
     var r;
     if (it.tipo === "imagem") r = await reduzirImagem(it);
     else r = await reduzirMidia(it);
     prog(it, null);
     var pct = Math.round((1 - r.blob.size / f.size) * 100);
-    status(it, "Pronto! Ficou com " + fmt(r.blob.size) + (pct > 0 ? " (" + pct + "% menor)" : "") + ", abaixo do limite de " + fmt(lim) + ".", "ok");
+    status(it, "Pronto! Ficou com " + fmt(r.blob.size) + (pct > 0 ? " (" + pct + "% menor)" : "") + " e já está no padrão do Zenvia.", "ok");
     baixarLink(it, r.blob, base(f.name) + "-reduzido." + r.ext);
   }
 
@@ -299,13 +311,13 @@
     return false;
   }
   async function reduzirImagem(it) {
-    status(it, "Reduzindo a imagem...");
+    status(it, "Identificado como imagem. Reduzindo...");
     prog(it, 0.05);
     var bmp;
     try { bmp = await createImageBitmap(it.file); }
     catch (e) { throw new Error("o navegador não consegue abrir esse formato (HEIC, por exemplo). Salve a foto como JPG ou PNG e tente de novo."); }
     var alvo = it.limite * 0.95;
-    var alfa = /png|webp|gif|avif/.test(it.file.type) && temTransparencia(bmp);
+    var alfa = temTransparencia(bmp);
     var lado = Math.max(bmp.width, bmp.height);
     var escala = lado > 4096 ? 4096 / lado : 1;
     for (var t = 0; t < 10; t++) {
@@ -335,71 +347,128 @@
       }
       escala *= Math.max(0.5, Math.sqrt(alvo / b.size) * 0.95);
     }
-    throw new Error("não consegui chegar em " + fmt(it.limite) + " sem destruir a imagem.");
+    throw new Error("não consegui chegar no limite do Zenvia sem destruir a imagem.");
   }
 
   /* ---------- vídeo e áudio (ffmpeg no navegador) ---------- */
-  var ff = null, ffUtil = null, ffAtual = null;
+  var ff = null, ffUtil = null, ffAtual = null, ffLog = null;
+  var FONTES = ["https://cdn.jsdelivr.net/npm/", "https://unpkg.com/"];
+
   function script(src) {
     return new Promise(function (ok, no) {
       var s = document.createElement("script"); s.src = src; s.onload = ok;
-      s.onerror = function () { no(new Error("não consegui baixar o conversor de vídeo. Confira a internet e tente de novo.")); };
+      s.onerror = function () { s.remove(); no(new Error("falha ao baixar " + src)); };
       document.head.appendChild(s);
     });
+  }
+  function comTempo(p, ms, msg) {
+    return new Promise(function (ok, no) {
+      var t = setTimeout(function () { no(new Error(msg)); }, ms);
+      p.then(function (v) { clearTimeout(t); ok(v); }, function (e) { clearTimeout(t); no(e); });
+    });
+  }
+  async function carregarScripts(pkg) {
+    if (window.FFmpegWASM && window.FFmpegUtil) return;
+    await script(pkg + "@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js");
+    await script(pkg + "@ffmpeg/util@0.12.1/dist/umd/index.js");
+  }
+  async function tentarCarregar(pkg, modo) {
+    var U = window.FFmpegUtil;
+    var wBase = pkg + "@ffmpeg/ffmpeg@0.12.10/dist/umd/";
+    var core = pkg + "@ffmpeg/core@0.12.6/dist/umd/";
+    var cfg = { classWorkerURL: await U.toBlobURL(wBase + "814.ffmpeg.js", "text/javascript") };
+    if (modo === "blob") {
+      cfg.coreURL = await U.toBlobURL(core + "ffmpeg-core.js", "text/javascript");
+      cfg.wasmURL = await U.toBlobURL(core + "ffmpeg-core.wasm", "application/wasm");
+    } else {
+      cfg.coreURL = core + "ffmpeg-core.js";
+      cfg.wasmURL = core + "ffmpeg-core.wasm";
+    }
+    var inst = new window.FFmpegWASM.FFmpeg();
+    inst.on("progress", function (p) { if (ffAtual && p && isFinite(p.progress)) prog(ffAtual, Math.min(0.99, Math.max(0.02, p.progress))); });
+    inst.on("log", function (e) { if (ffLog) ffLog.push(e.message); });
+    try { await comTempo(inst.load(cfg), 180000, "o conversor demorou demais para carregar"); }
+    catch (e) { try { inst.terminate(); } catch (x) {} throw e; }
+    return inst;
   }
   async function carregarFF(it) {
     if (ff) return;
     status(it, "Preparando o conversor de vídeo (só na primeira vez, cerca de 30 MB)...");
     prog(it, -1);
-    var ffBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/";
-    var core = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/";
-    await script(ffBase + "ffmpeg.js");
-    await script("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js");
-    ffUtil = window.FFmpegUtil;
-    var inst = new window.FFmpegWASM.FFmpeg();
-    inst.on("progress", function (p) { if (ffAtual && p && isFinite(p.progress)) prog(ffAtual, Math.min(0.99, Math.max(0.02, p.progress))); });
-    await inst.load({
-      coreURL: await ffUtil.toBlobURL(core + "ffmpeg-core.js", "text/javascript"),
-      wasmURL: await ffUtil.toBlobURL(core + "ffmpeg-core.wasm", "application/wasm"),
-      classWorkerURL: await ffUtil.toBlobURL(ffBase + "814.ffmpeg.js", "text/javascript")
-    });
-    ff = inst;
+    var ultimo = null;
+    for (var i = 0; i < FONTES.length; i++) {
+      try { await carregarScripts(FONTES[i]); } catch (e) { ultimo = e; continue; }
+      var modos = ["blob", "direto"];
+      for (var j = 0; j < modos.length; j++) {
+        try { ff = await tentarCarregar(FONTES[i], modos[j]); ffUtil = window.FFmpegUtil; return; }
+        catch (e) { ultimo = e; }
+      }
+    }
+    throw new Error("não consegui carregar o conversor de vídeo (" + ((ultimo && ultimo.message) || ultimo) + "). Confira a internet, desative extensões que bloqueiam scripts e tente de novo.");
   }
-  function duracaoDe(file, tipo) {
+
+  // lê duração e se há imagem (vídeo de verdade) usando o próprio navegador
+  function sondarNavegador(file) {
     return new Promise(function (ok, no) {
-      var el = document.createElement(tipo === "video" ? "video" : "audio"), u = URL.createObjectURL(file);
-      el.preload = "metadata";
-      el.onloadedmetadata = function () { var d = el.duration; URL.revokeObjectURL(u); isFinite(d) && d > 0 ? ok(d) : no(new Error("não consegui ler a duração.")); };
-      el.onerror = function () { URL.revokeObjectURL(u); no(new Error("o navegador não consegue ler esse arquivo. Tente um MP4.")); };
+      var el = document.createElement("video"), u = URL.createObjectURL(file);
+      el.preload = "metadata"; el.muted = true;
+      el.onloadedmetadata = function () {
+        var d = el.duration, v = el.videoWidth > 0;
+        URL.revokeObjectURL(u);
+        isFinite(d) && d > 0 ? ok({ dur: d, temVideo: v }) : no(new Error("sem duração"));
+      };
+      el.onerror = function () { URL.revokeObjectURL(u); no(new Error("o navegador não lê esse formato")); };
       el.src = u;
     });
   }
+  // plano B: pergunta ao ffmpeg (serve para MKV, AVI, WMV etc.)
+  async function sondarFF(entrada) {
+    ffLog = [];
+    try { await ff.exec(["-i", entrada]); } catch (e) {}
+    var linhas = ffLog; ffLog = null;
+    var txt = linhas.join("\n");
+    var m = /Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/.exec(txt);
+    if (!m) throw new Error("não consegui ler a duração desse arquivo.");
+    var dur = (+m[1]) * 3600 + (+m[2]) * 60 + parseFloat(m[3]);
+    var temVideo = linhas.some(function (l) { return /Stream #.*Video:/.test(l) && !/attached pic/.test(l); });
+    return { dur: dur, temVideo: temVideo };
+  }
+
   async function reduzirMidia(it) {
-    var f = it.file, video = it.tipo === "video";
-    var dur = await duracaoDe(f, it.tipo);
+    var f = it.file;
+    status(it, "Identificado como " + NOME_TIPO[it.tipo] + ". Preparando...");
     await carregarFF(it);
     ffAtual = it;
-    var ext0 = ext(f.name) || (video ? "mp4" : "m4a");
-    var entrada = "entrada." + ext0, saida = video ? "saida.mp4" : "saida.m4a";
-    status(it, video ? "Reduzindo o vídeo. Pode demorar alguns minutos, mantenha esta aba aberta." : "Reduzindo o áudio...");
-    prog(it, 0.02);
-    await ff.writeFile(entrada, await ffUtil.fetchFile(f));
-    var alvoBytes = it.limite * 0.92, r = null;
-    var audioK = video ? 96 : 0;
-    var videoK = video ? Math.floor((alvoBytes * 8) / dur / 1000 - audioK) : 0;
-    var audioOnlyK = video ? 0 : Math.min(192, Math.floor((alvoBytes * 8) / dur / 1000));
+    var entrada = "entrada." + (ext(f.name) || "bin");
+    var r = null;
     try {
+      prog(it, 0.02);
+      await ff.writeFile(entrada, await ffUtil.fetchFile(f));
+      var info;
+      try { info = await sondarNavegador(f); } catch (e) { info = await sondarFF(entrada); }
+      if (!(info.dur > 0)) throw new Error("não consegui ler a duração desse arquivo.");
+
+      var video = it.tipo === "video" && info.temVideo;   // "vídeo" sem imagem vira áudio
+      if (it.tipo === "video" && !video) it.tipo = "audio";
+      var saida = video ? "saida.mp4" : "saida.m4a";
+      status(it, video ? "Identificado como vídeo. Reduzindo, pode demorar alguns minutos. Mantenha esta aba aberta." : "Identificado como áudio. Reduzindo...");
+
+      var alvoBytes = it.limite * 0.92, dur = info.dur;
+      var audioK = video ? 96 : 0;
+      var videoK = video ? Math.floor((alvoBytes * 8) / dur / 1000 - audioK) : 0;
+      var audioOnlyK = video ? 0 : Math.min(192, Math.floor((alvoBytes * 8) / dur / 1000));
+
       for (var tent = 0; tent < 3; tent++) {
         var args;
         if (video) {
-          if (videoK < 120) throw new Error("o vídeo é longo demais para caber em " + fmt(it.limite) + " com qualidade aceitável. Corte o vídeo ou aumente o limite.");
+          if (videoK < 120) throw new Error("o vídeo é longo demais para caber no limite do Zenvia com qualidade aceitável. Corte o vídeo e tente de novo.");
           var H = videoK >= 2500 ? 1080 : videoK >= 1200 ? 720 : videoK >= 500 ? 480 : 360;
           args = ["-i", entrada, "-map", "0:v:0", "-map", "0:a:0?", "-c:v", "libx264", "-preset", "veryfast",
             "-b:v", videoK + "k", "-maxrate", Math.round(videoK * 1.25) + "k", "-bufsize", (videoK * 2) + "k",
             "-vf", "scale=-2:'min(ih," + H + ")'", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", audioK + "k", "-ac", "2",
             "-movflags", "+faststart", "-y", saida];
         } else {
-          if (audioOnlyK < 16) throw new Error("o áudio é longo demais para caber em " + fmt(it.limite) + ".");
+          if (audioOnlyK < 16) throw new Error("o áudio é longo demais para caber no limite do Zenvia.");
           args = ["-i", entrada, "-vn", "-c:a", "aac", "-b:a", audioOnlyK + "k", "-y", saida];
         }
         var code = await ff.exec(args);
@@ -414,9 +483,9 @@
       }
     } finally {
       try { await ff.deleteFile(entrada); } catch (e) {}
-      ffAtual = null;
+      ffAtual = null; ffLog = null;
     }
-    if (!r) throw new Error("não consegui chegar em " + fmt(it.limite) + ".");
+    if (!r) throw new Error("não consegui chegar no limite do Zenvia.");
     return r;
   }
 
