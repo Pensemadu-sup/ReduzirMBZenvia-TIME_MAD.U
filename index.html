@@ -372,22 +372,24 @@
     await script(pkg + "@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js");
     await script(pkg + "@ffmpeg/util@0.12.1/dist/umd/index.js");
   }
-  async function tentarCarregar(pkg, modo) {
+  // O worker do ffmpeg.wasm é do tipo "module": ele só consegue importar o core no
+  // formato ESM. Foi isso que causava "failed to import ffmpeg-core.js" com o core UMD.
+  // Tentamos o ESM primeiro e, se falhar, o UMD, em cada CDN.
+  var FORMATOS = ["esm", "umd"];
+
+  async function tentarCarregar(pkg, formato) {
     var U = window.FFmpegUtil;
     var wBase = pkg + "@ffmpeg/ffmpeg@0.12.10/dist/umd/";
-    var core = pkg + "@ffmpeg/core@0.12.6/dist/umd/";
-    var cfg = { classWorkerURL: await U.toBlobURL(wBase + "814.ffmpeg.js", "text/javascript") };
-    if (modo === "blob") {
-      cfg.coreURL = await U.toBlobURL(core + "ffmpeg-core.js", "text/javascript");
-      cfg.wasmURL = await U.toBlobURL(core + "ffmpeg-core.wasm", "application/wasm");
-    } else {
-      cfg.coreURL = core + "ffmpeg-core.js";
-      cfg.wasmURL = core + "ffmpeg-core.wasm";
-    }
+    var core = pkg + "@ffmpeg/core@0.12.6/dist/" + formato + "/";
+    var cfg = {
+      classWorkerURL: await U.toBlobURL(wBase + "814.ffmpeg.js", "text/javascript"),
+      coreURL: await U.toBlobURL(core + "ffmpeg-core.js", "text/javascript"),
+      wasmURL: await U.toBlobURL(core + "ffmpeg-core.wasm", "application/wasm")
+    };
     var inst = new window.FFmpegWASM.FFmpeg();
     inst.on("progress", function (p) { if (ffAtual && p && isFinite(p.progress)) prog(ffAtual, Math.min(0.99, Math.max(0.02, p.progress))); });
     inst.on("log", function (e) { if (ffLog) ffLog.push(e.message); });
-    try { await comTempo(inst.load(cfg), 180000, "o conversor demorou demais para carregar"); }
+    try { await comTempo(inst.load(cfg), 120000, "o conversor demorou demais para carregar"); }
     catch (e) { try { inst.terminate(); } catch (x) {} throw e; }
     return inst;
   }
@@ -395,16 +397,16 @@
     if (ff) return;
     status(it, "Preparando o conversor de vídeo (só na primeira vez, cerca de 30 MB)...");
     prog(it, -1);
-    var ultimo = null;
+    var erros = [];
+    function anota(e) { var m = (e && e.message) || String(e); if (erros.indexOf(m) < 0) erros.push(m); }
     for (var i = 0; i < FONTES.length; i++) {
-      try { await carregarScripts(FONTES[i]); } catch (e) { ultimo = e; continue; }
-      var modos = ["blob", "direto"];
-      for (var j = 0; j < modos.length; j++) {
-        try { ff = await tentarCarregar(FONTES[i], modos[j]); ffUtil = window.FFmpegUtil; return; }
-        catch (e) { ultimo = e; }
+      try { await carregarScripts(FONTES[i]); } catch (e) { anota(e); continue; }
+      for (var j = 0; j < FORMATOS.length; j++) {
+        try { ff = await tentarCarregar(FONTES[i], FORMATOS[j]); ffUtil = window.FFmpegUtil; return; }
+        catch (e) { anota(e); }
       }
     }
-    throw new Error("não consegui carregar o conversor de vídeo (" + ((ultimo && ultimo.message) || ultimo) + "). Confira a internet, desative extensões que bloqueiam scripts e tente de novo.");
+    throw new Error("não consegui carregar o conversor de vídeo (" + erros.join(" / ") + "). Confira a internet, desative extensões que bloqueiam scripts e tente de novo.");
   }
 
   // lê duração e se há imagem (vídeo de verdade) usando o próprio navegador
@@ -474,7 +476,7 @@
         var code = await ff.exec(args);
         if (code !== 0) throw new Error("o conversor não conseguiu ler esse arquivo (código " + code + ").");
         var dados = await ff.readFile(saida);
-        var blob = new Blob([dados.buffer], { type: video ? "video/mp4" : "audio/mp4" });
+        var blob = new Blob([dados], { type: video ? "video/mp4" : "audio/mp4" });
         try { await ff.deleteFile(saida); } catch (e) {}
         if (blob.size <= it.limite) { r = { blob: blob, ext: video ? "mp4" : "m4a" }; break; }
         var fator = (alvoBytes / blob.size) * 0.92;
