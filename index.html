@@ -387,7 +387,15 @@
       wasmURL: await U.toBlobURL(core + "ffmpeg-core.wasm", "application/wasm")
     };
     var inst = new window.FFmpegWASM.FFmpeg();
-    inst.on("progress", function (p) { if (ffAtual && p && isFinite(p.progress)) prog(ffAtual, Math.min(0.99, Math.max(0.02, p.progress))); });
+    inst.on("progress", function (p) {
+      if (!ffAtual || !p || !isFinite(p.progress)) return;
+      var v = Math.min(0.99, Math.max(0.02, p.progress));
+      prog(ffAtual, v);
+      if (ffAtual.t0 && ffAtual.msgBase && v > 0.04) {
+        var seg = (Date.now() - ffAtual.t0) / 1000 * (1 - v) / v;
+        status(ffAtual, ffAtual.msgBase + " " + Math.round(v * 100) + "% · faltam cerca de " + (seg < 60 ? Math.max(5, Math.round(seg / 5) * 5) + " s" : Math.max(1, Math.round(seg / 60)) + " min"));
+      }
+    });
     inst.on("log", function (e) { if (ffLog) ffLog.push(e.message); });
     try { await comTempo(inst.load(cfg), 120000, "o conversor demorou demais para carregar"); }
     catch (e) { try { inst.terminate(); } catch (x) {} throw e; }
@@ -436,6 +444,20 @@
     return { dur: dur, temVideo: temVideo };
   }
 
+  // lê só o cabeçalho do arquivo para saber quantos quadros por segundo o vídeo tem
+  async function fpsDe(entrada) {
+    ffLog = [];
+    try { await ff.exec(["-i", entrada]); } catch (e) {}
+    var l = ffLog; ffLog = null;
+    for (var i = 0; i < l.length; i++) {
+      if (/Stream #.*Video:/.test(l[i]) && !/attached pic/.test(l[i])) {
+        var m = /(\d+(?:\.\d+)?)\s*fps/.exec(l[i]);
+        if (m) return parseFloat(m[1]);
+      }
+    }
+    return 0;
+  }
+
   async function reduzirMidia(it) {
     var f = it.file;
     status(it, "Identificado como " + NOME_TIPO[it.tipo] + ". Preparando...");
@@ -453,9 +475,12 @@
       var video = it.tipo === "video" && info.temVideo;   // "vídeo" sem imagem vira áudio
       if (it.tipo === "video" && !video) it.tipo = "audio";
       var saida = video ? "saida.mp4" : "saida.m4a";
-      status(it, video ? "Identificado como vídeo. Reduzindo, pode demorar alguns minutos. Mantenha esta aba aberta." : "Identificado como áudio. Reduzindo...");
+      it.msgBase = video ? "Reduzindo o vídeo. Mantenha esta aba aberta e visível." : "Reduzindo o áudio.";
+      status(it, it.msgBase);
+      var fps = video ? await fpsDe(entrada) : 0;
 
-      var alvoBytes = it.limite * 0.92, dur = info.dur;
+      // alvo um pouco abaixo do limite: evita ter que converter uma segunda vez (que dobra o tempo)
+      var alvoBytes = it.limite * 0.88, dur = info.dur;
       var audioK = video ? 96 : 0;
       var videoK = video ? Math.floor((alvoBytes * 8) / dur / 1000 - audioK) : 0;
       var audioOnlyK = video ? 0 : Math.min(192, Math.floor((alvoBytes * 8) / dur / 1000));
@@ -464,15 +489,16 @@
         var args;
         if (video) {
           if (videoK < 120) throw new Error("o vídeo é longo demais para caber no limite do Zenvia com qualidade aceitável. Corte o vídeo e tente de novo.");
-          var H = videoK >= 2500 ? 1080 : videoK >= 1200 ? 720 : videoK >= 500 ? 480 : 360;
-          args = ["-i", entrada, "-map", "0:v:0", "-map", "0:a:0?", "-c:v", "libx264", "-preset", "veryfast",
-            "-b:v", videoK + "k", "-maxrate", Math.round(videoK * 1.25) + "k", "-bufsize", (videoK * 2) + "k",
-            "-vf", "scale=-2:'min(ih," + H + ")'", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", audioK + "k", "-ac", "2",
+          var H = videoK >= 1200 ? 720 : videoK >= 500 ? 480 : 360;   // 720p já é ótimo para WhatsApp e converte bem mais rápido
+          args = ["-i", entrada, "-map", "0:v:0", "-map", "0:a:0?", "-c:v", "libx264", "-preset", "ultrafast",
+            "-b:v", videoK + "k", "-maxrate", Math.round(videoK * 1.15) + "k", "-bufsize", (videoK * 2) + "k",
+            "-vf", (fps > 31 ? "fps=30," : "") + "scale=-2:'min(ih," + H + ")'", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", audioK + "k", "-ac", "2",
             "-movflags", "+faststart", "-y", saida];
         } else {
           if (audioOnlyK < 16) throw new Error("o áudio é longo demais para caber no limite do Zenvia.");
           args = ["-i", entrada, "-vn", "-c:a", "aac", "-b:a", audioOnlyK + "k", "-y", saida];
         }
+        it.t0 = Date.now();
         var code = await ff.exec(args);
         if (code !== 0) throw new Error("o conversor não conseguiu ler esse arquivo (código " + code + ").");
         var dados = await ff.readFile(saida);
@@ -481,7 +507,8 @@
         if (blob.size <= it.limite) { r = { blob: blob, ext: video ? "mp4" : "m4a" }; break; }
         var fator = (alvoBytes / blob.size) * 0.92;
         if (video) videoK = Math.floor(videoK * fator); else audioOnlyK = Math.floor(audioOnlyK * fator);
-        status(it, "Ficou um pouco acima do limite. Tentando de novo com menos qualidade...");
+        it.msgBase = "Ficou um pouco acima do limite. Tentando de novo com menos qualidade.";
+        status(it, it.msgBase);
       }
     } finally {
       try { await ff.deleteFile(entrada); } catch (e) {}
