@@ -272,7 +272,7 @@
   }
 
   async function processar(it) {
-    var f = it.file;
+    var f = it.file, inicio = Date.now();
     var id = await identificar(f);
     it.tipo = id.tipo;
     it.limite = limiteMB(it.tipo) * MB;
@@ -297,7 +297,8 @@
     else r = await reduzirMidia(it);
     prog(it, null);
     var pct = Math.round((1 - r.blob.size / f.size) * 100);
-    status(it, "Pronto! Ficou com " + fmt(r.blob.size) + (pct > 0 ? " (" + pct + "% menor)" : "") + " e já está no padrão do Zenvia.", "ok");
+    var seg = Math.round((Date.now() - inicio) / 1000);
+    status(it, "Pronto! Ficou com " + fmt(r.blob.size) + (pct > 0 ? " (" + pct + "% menor)" : "") + " e já está no padrão do Zenvia. Levou " + (seg < 60 ? seg + " s" : Math.floor(seg / 60) + " min " + (seg % 60) + " s") + ".", "ok");
     baixarLink(it, r.blob, base(f.name) + "-reduzido." + r.ext);
   }
 
@@ -401,10 +402,17 @@
     catch (e) { try { inst.terminate(); } catch (x) {} throw e; }
     return inst;
   }
-  async function carregarFF(it) {
-    if (ff) return;
-    status(it, "Preparando o conversor de vídeo (só na primeira vez, cerca de 30 MB)...");
-    prog(it, -1);
+  // O conversor começa a baixar assim que a página abre, para já estar pronto quando o arquivo chegar.
+  var ffCarregando = null;
+  function carregarFF(it) {
+    if (ff) return Promise.resolve();
+    if (it) { status(it, "Preparando o conversor de vídeo (só na primeira vez, cerca de 30 MB)..."); prog(it, -1); }
+    if (!ffCarregando) {
+      ffCarregando = carregarFFReal().then(function () { ffCarregando = null; }, function (e) { ffCarregando = null; throw e; });
+    }
+    return ffCarregando;
+  }
+  async function carregarFFReal() {
     var erros = [];
     function anota(e) { var m = (e && e.message) || String(e); if (erros.indexOf(m) < 0) erros.push(m); }
     for (var i = 0; i < FONTES.length; i++) {
@@ -444,18 +452,34 @@
     return { dur: dur, temVideo: temVideo };
   }
 
-  // lê só o cabeçalho do arquivo para saber quantos quadros por segundo o vídeo tem
-  async function fpsDe(entrada) {
+  // lê só o cabeçalho do arquivo (sem converter): quadros por segundo e tamanho da imagem
+  async function infoVideo(entrada) {
     ffLog = [];
     try { await ff.exec(["-i", entrada]); } catch (e) {}
     var l = ffLog; ffLog = null;
+    var r = { fps: 0, w: 0, h: 0 };
     for (var i = 0; i < l.length; i++) {
       if (/Stream #.*Video:/.test(l[i]) && !/attached pic/.test(l[i])) {
-        var m = /(\d+(?:\.\d+)?)\s*fps/.exec(l[i]);
-        if (m) return parseFloat(m[1]);
+        var m = /(\d+(?:\.\d+)?)\s*fps/.exec(l[i]); if (m) r.fps = parseFloat(m[1]);
+        var d = /,\s*(\d{2,5})x(\d{2,5})(?=[\s,\[])/.exec(l[i]); if (d) { r.w = +d[1]; r.h = +d[2]; }
+        break;
       }
     }
-    return 0;
+    return r;
+  }
+
+  // Escolhe o maior tamanho (lado menor, em pixels) que ainda tem bits suficientes por pixel.
+  // Com pouco orçamento, uma imagem menor e nítida fica melhor que uma grande e borrada.
+  function escolherLado(videoK, v) {
+    var curto = Math.min(v.w, v.h), longo = Math.max(v.w, v.h);
+    if (!(curto > 0)) return videoK >= 2500 ? 720 : videoK >= 1000 ? 540 : 360;   // não leu o tamanho: regra simples
+    var fpsSaida = v.fps > 31 ? 30 : (v.fps > 0 ? v.fps : 30), prop = longo / curto;
+    var c = [1080, 720, 540, 480, 360].filter(function (x) { return x <= curto; });
+    if (curto < 1080 && c.indexOf(curto) < 0) c.unshift(curto);       // tamanho original, se já for pequeno
+    for (var i = 0; i < c.length; i++) {
+      if (videoK * 1000 / (c[i] * c[i] * prop * fpsSaida) >= 0.06) return c[i];
+    }
+    return Math.min(360, curto);
   }
 
   async function reduzirMidia(it) {
@@ -477,7 +501,7 @@
       var saida = video ? "saida.mp4" : "saida.m4a";
       it.msgBase = video ? "Reduzindo o vídeo. Mantenha esta aba aberta e visível." : "Reduzindo o áudio.";
       status(it, it.msgBase);
-      var fps = video ? await fpsDe(entrada) : 0;
+      var vinfo = video ? await infoVideo(entrada) : null, fps = vinfo ? vinfo.fps : 0;
 
       // alvo um pouco abaixo do limite: evita ter que converter uma segunda vez (que dobra o tempo)
       var alvoBytes = it.limite * 0.88, dur = info.dur;
@@ -489,10 +513,13 @@
         var args;
         if (video) {
           if (videoK < 120) throw new Error("o vídeo é longo demais para caber no limite do Zenvia com qualidade aceitável. Corte o vídeo e tente de novo.");
-          var H = videoK >= 1200 ? 720 : videoK >= 500 ? 480 : 360;   // 720p já é ótimo para WhatsApp e converte bem mais rápido
-          args = ["-i", entrada, "-map", "0:v:0", "-map", "0:a:0?", "-c:v", "libx264", "-preset", "ultrafast",
-            "-b:v", videoK + "k", "-maxrate", Math.round(videoK * 1.15) + "k", "-bufsize", (videoK * 2) + "k",
-            "-vf", (fps > 31 ? "fps=30," : "") + "scale=-2:'min(ih," + H + ")'", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", audioK + "k", "-ac", "2",
+          var S = escolherLado(videoK, vinfo);
+          // reduz pelo lado menor (vale para vídeo deitado e em pé) e mantém as medidas pares
+          var escala = "scale='if(gt(iw,ih),-2,trunc(min(iw," + S + ")/2)*2)':'if(gt(iw,ih),trunc(min(ih," + S + ")/2)*2,-2)'";
+          // qualidade constante (crf) com teto de bitrate: gasta mais bits onde precisa e nunca passa do limite
+          args = ["-i", entrada, "-map", "0:v:0", "-map", "0:a:0?", "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
+            "-maxrate", videoK + "k", "-bufsize", Math.round(videoK * 1.5) + "k",
+            "-vf", (fps > 31 ? "fps=30," : "") + escala, "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", audioK + "k", "-ac", "2",
             "-movflags", "+faststart", "-y", saida];
         } else {
           if (audioOnlyK < 16) throw new Error("o áudio é longo demais para caber no limite do Zenvia.");
@@ -536,6 +563,7 @@
       setTimeout(function () { var a = document.createElement("a"); a.href = i.saida.url; a.download = i.saida.nome; document.body.appendChild(a); a.click(); a.remove(); }, n++ * 400);
     });
   });
+  window.addEventListener("load", function () { setTimeout(function () { carregarFF(null).catch(function () {}); }, 1200); });
   window.addEventListener("beforeunload", function (e) { if (rodando) { e.preventDefault(); e.returnValue = ""; } });
 })();
 </script>
